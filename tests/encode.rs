@@ -1,4 +1,4 @@
-use async_sse::{decode, encode, Event};
+use tide_compressed_sse::internals::{decode, encode, Event};
 use async_std::io::BufReader;
 use async_std::prelude::*;
 use async_std::task;
@@ -28,7 +28,7 @@ fn assert_retry(event: &Event, dur: u64) {
 
 #[async_std::test]
 async fn encode_message() -> http_types::Result<()> {
-    let (sender, encoder) = encode();
+    let (sender, encoder) = encode(false);
     task::spawn(async move { sender.send("cat", "chashu", None).await });
 
     let mut reader = decode(BufReader::new(encoder));
@@ -39,7 +39,7 @@ async fn encode_message() -> http_types::Result<()> {
 
 #[async_std::test]
 async fn encode_message_with_id() -> http_types::Result<()> {
-    let (sender, encoder) = encode();
+    let (sender, encoder) = encode(false);
     task::spawn(async move { sender.send("cat", "chashu", Some("0")).await });
 
     let mut reader = decode(BufReader::new(encoder));
@@ -50,7 +50,7 @@ async fn encode_message_with_id() -> http_types::Result<()> {
 
 #[async_std::test]
 async fn encode_retry() -> http_types::Result<()> {
-    let (sender, encoder) = encode();
+    let (sender, encoder) = encode(false);
     task::spawn(async move {
         let dur = Duration::from_secs(12);
         sender.send_retry(dur, None).await.unwrap();
@@ -64,7 +64,7 @@ async fn encode_retry() -> http_types::Result<()> {
 
 #[async_std::test]
 async fn dropping_encoder() -> http_types::Result<()> {
-    let (sender, encoder) = encode();
+    let (sender, encoder) = encode(false);
     let sender_clone = sender.clone();
     task::spawn(async move { sender_clone.send("cat", "chashu", None).await });
 

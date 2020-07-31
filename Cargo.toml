@@ -1,9 +1,9 @@
 [package]
-name = "async-sse"
+name = "tide_compressed_sse"
 version = "4.0.0"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/http-rs/async-sse"
-documentation = "https://docs.rs/async-sse"
+repository = "https://github.com/yarn/tide_compressed_sse-sse"
+documentation = "https://docs.rs/tide_compressed_sse"
 description = "Async Server Sent Event parser and encoder"
 readme = "README.md"
 edition = "2018"
@@ -12,9 +12,11 @@ categories = []
 authors = [
     "Renée Kooi <renee@kooi.me>",
     "Yoshua Wuyts <yoshuawuyts@gmail.com>",
+    "Yarn <yarnnd@gmail.com>",
 ]
 
 [features]
+__internal_test = []
 
 [dependencies]
 async-std = { version = "1.6.0", features = ["unstable"] }
@@ -23,6 +25,8 @@ log = "0.4.8"
 memchr = "2.3.3"
 pin-project-lite = "0.1.4"
 async-channel = "1.1.1"
+flate2 = "1.0.16"
+tide = "^0.12"
 
 [dev-dependencies]
 femme = "2.0.0"

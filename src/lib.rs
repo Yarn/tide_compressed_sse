@@ -2,26 +2,25 @@
 //!
 //! # Example
 //!
-//! ```
-//! use async_sse::{decode, encode, Event};
-//! use async_std::prelude::*;
-//! use async_std::io::BufReader;
-//! use async_std::task;
+//! ```norun
+//! use tide::Request;
 //!
 //! #[async_std::main]
 //! async fn main() -> http_types::Result<()> {
-//!     // Create an encoder + sender pair and send a message.
-//!     let (sender, encoder) = encode();
-//!     task::spawn(async move {
-//!         sender.send("cat", "chashu", None).await;
+//!     let mut app = tide::new();
+//!     
+//!      app.at("/sse").get(|req| async move {
+//!         let mut res = tide_compressed_sse::upgrade(req, |_req: Request<()>, sender| async move {
+//!             sender.send("message", "foo", None).await?;
+//!             
+//!             Ok(())
+//!         });
+//!         
+//!         Ok(res)
 //!     });
-//!
-//!     // Decode messages using a decoder.
-//!     let mut reader = decode(BufReader::new(encoder));
-//!     let event = reader.next().await.unwrap()?;
-//!     // Match and handle the event
-//!
-//!     # let _ = event;
+//!     
+//!     app.listen("localhost:8080").await?;
+//!     
 //!     Ok(())
 //! }
 //! ```
@@ -33,7 +32,7 @@
 
 #![forbid(rust_2018_idioms)]
 #![deny(missing_debug_implementations, nonstandard_style)]
-#![warn(missing_docs, missing_doc_code_examples, unreachable_pub)]
+#![warn(missing_docs, missing_doc_code_examples)]
 
 mod decoder;
 mod encoder;
@@ -41,11 +40,20 @@ mod event;
 mod handshake;
 mod lines;
 mod message;
+mod tide;
 
-pub use decoder::{decode, Decoder};
-pub use encoder::{encode, Encoder, Sender};
-pub use event::Event;
-pub use handshake::upgrade;
-pub use message::Message;
+use encoder::encode;
+use event::Event;
+use message::Message;
+pub use crate::tide::upgrade::upgrade;
+pub use crate::tide::Sender;
+
+/// Exports for tests
+#[cfg(feature = "__internal_test")]
+pub mod internals {
+    pub use crate::decoder::{decode, Decoder};
+    pub use crate::encoder::{encode, Encoder};
+    pub use crate::event::Event;
+}
 
 pub(crate) use lines::Lines;

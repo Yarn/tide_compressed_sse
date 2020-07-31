@@ -5,6 +5,25 @@ use async_std::task::{ready, Context, Poll};
 use std::io;
 use std::pin::Pin;
 use std::time::Duration;
+use std::io::Write;
+
+use flate2::{GzBuilder, Compression};
+
+#[derive(Debug)]
+struct WriteBuf {
+    buf: Vec<u8>,
+}
+
+impl Write for WriteBuf {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.buf.extend(buf);
+        Ok(buf.len())
+    }
+    
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
 
 pin_project_lite::pin_project! {
     /// An SSE protocol encoder.
@@ -14,6 +33,8 @@ pin_project_lite::pin_project! {
         #[pin]
         receiver: async_channel::Receiver<Vec<u8>>,
         cursor: usize,
+        gz: flate2::write::GzEncoder<WriteBuf>,
+        gz_enabled: bool,
     }
 }
 
@@ -26,8 +47,17 @@ impl AsyncRead for Encoder {
         // Request a new buffer if we don't have one yet.
         if let None = self.buf {
             self.buf = match ready!(Pin::new(&mut self.receiver).poll_next(cx)) {
-                Some(buf) => {
+                Some(mut buf) => {
                     log::trace!("> Received a new buffer with len {}", buf.len());
+                    
+                    if self.gz_enabled {
+                        self.gz.write_all(&buf)?;
+                        self.gz.flush()?;
+                        let inner = self.gz.get_mut();
+                        std::mem::swap(&mut inner.buf, &mut buf);
+                        inner.buf.clear();
+                    }
+                    
                     Some(buf)
                 }
                 None => {
@@ -82,12 +112,20 @@ impl AsyncRead for Encoder {
 pub struct Sender(async_channel::Sender<Vec<u8>>);
 
 /// Create a new SSE encoder.
-pub fn encode() -> (Sender, Encoder) {
+pub fn encode(is_gzip: bool) -> (Sender, Encoder) {
     let (sender, receiver) = async_channel::bounded(1);
+    
+    let write_buf = WriteBuf { buf: Vec::new() };
+        
+    let gz = GzBuilder::new()
+        .write(write_buf, Compression::default());
+    
     let encoder = Encoder {
         receiver,
         buf: None,
         cursor: 0,
+        gz: gz,
+        gz_enabled: is_gzip,
     };
     (Sender(sender), encoder)
 }
@@ -102,23 +140,23 @@ impl Sender {
 
     /// Send a new message over SSE.
     pub async fn send(&self, name: &str, data: &str, id: Option<&str>) -> io::Result<()> {
-        // Write the event name
-        let msg = format!("event:{}\n", name);
-        self.inner_send(msg).await?;
-
+        
         // Write the id
-        if let Some(id) = id {
-            self.inner_send(format!("id:{}\n", id)).await?;
-        }
-
-        // Write the data section, and end.
-        let msg = format!("data:{}\n\n", data);
+        let id_string: String = if let Some(id) = id {
+            format!("id:{}\n", id)
+        } else {
+            "".into()
+        };
+        
+        let msg = format!("event:{}\n{}data:{}\n\n", name, id_string, data);
+        
         self.inner_send(msg).await?;
-
+        
         Ok(())
     }
 
     /// Send a new "retry" message over SSE.
+    #[allow(dead_code)]
     pub async fn send_retry(&self, dur: Duration, id: Option<&str>) -> io::Result<()> {
         // Write the id
         if let Some(id) = id {

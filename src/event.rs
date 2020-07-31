@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::Message;
 
 use std::time::Duration;

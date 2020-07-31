@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use async_std::io::BufRead as AsyncBufRead;
 use async_std::stream::Stream;
 use async_std::task::{self, Context, Poll};

@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 /// An SSE event with a data payload.
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Message {

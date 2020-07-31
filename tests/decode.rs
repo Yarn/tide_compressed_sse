@@ -1,4 +1,4 @@
-use async_sse::{decode, Event};
+use tide_compressed_sse::internals::{decode, Event};
 use async_std::io::Cursor;
 use async_std::prelude::*;
 use std::time::Duration;
