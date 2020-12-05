@@ -2,7 +2,7 @@
 name = "tide_compressed_sse"
 version = "4.0.0"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/yarn/tide_compressed_sse-sse"
+repository = "https://github.com/yarn/tide_compressed_sse"
 documentation = "https://docs.rs/tide_compressed_sse"
 description = "Async Server Sent Event parser and encoder"
 readme = "README.md"
